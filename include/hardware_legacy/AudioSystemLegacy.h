@@ -61,17 +61,36 @@ enum audio_source {
     AUDIO_SOURCE_CAMCORDER = 5,
     AUDIO_SOURCE_VOICE_RECOGNITION = 6,
     AUDIO_SOURCE_VOICE_COMMUNICATION = 7,
-#if defined(QCOM_HARDWARE) && !defined(USES_AUDIO_LEGACY)
+#ifdef QCOM_FM_ENABLED
     AUDIO_SOURCE_FM_RX = 8,
     AUDIO_SOURCE_FM_RX_A2DP = 9,
-#endif
+    AUDIO_SOURCE_MAX = AUDIO_SOURCE_FM_RX_A2DP,
+#else
     AUDIO_SOURCE_MAX = AUDIO_SOURCE_VOICE_COMMUNICATION,
+#endif
 
     AUDIO_SOURCE_LIST_END  // must be last - used to validate audio source type
 };
 
+#ifdef QCOM_MPQ_BROADCAST
+enum qcom_audio_source {
+    QCOM_AUDIO_SOURCE_DEFAULT                       = 0x100,
+    QCOM_AUDIO_SOURCE_DIGITAL_BROADCAST_MAIN_AD     = 0x101,
+    QCOM_AUDIO_SOURCE_DIGITAL_BROADCAST_MAIN_ONLY   = 0x104,
+    QCOM_AUDIO_SOURCE_ANALOG_BROADCAST              = 0x102,
+    QCOM_AUDIO_SOURCE_HDMI_IN                       = 0x103,
+};
+
+enum qcom_broadcast_audio_format {
+    QCOM_BROADCAST_AUDIO_FORMAT_LPCM                = 0x200,
+    QCOM_BROADCAST_AUDIO_FORMAT_COMPRESSED          = 0x201,
+    QCOM_BROADCAST_AUDIO_FORMAT_COMPRESSED_HBR      = 0x202
+};
+#endif
+
 class AudioSystem {
 public:
+#if 1
     enum stream_type {
         DEFAULT          =-1,
         VOICE_CALL       = 0,
@@ -84,7 +103,7 @@ public:
         ENFORCED_AUDIBLE = 7, // Sounds that cannot be muted by user and must be routed to speaker
         DTMF             = 8,
         TTS              = 9,
-#if defined(QCOM_HARDWARE) && !defined(USES_AUDIO_LEGACY)
+#ifdef QCOM_FM_ENABLED
         FM               = 10,
 #endif
         NUM_STREAM_TYPES
@@ -139,8 +158,17 @@ public:
         HE_AAC_V1           = 0x05000000,
         HE_AAC_V2           = 0x06000000,
         VORBIS              = 0x07000000,
+#ifdef QCOM_HARDWARE
         EVRC                = 0x08000000,
         QCELP               = 0x09000000,
+        AC3                 = 0x0a000000,
+        AC3_PLUS            = 0x0b000000,
+        DTS                 = 0x0c000000,
+        WMA                 = 0x0d000000,
+        EVRCB               = 0x10000000,
+        EVRCWB              = 0x11000000,
+        EAC3                = 0x12000000,
+#endif
         MAIN_FORMAT_MASK    = 0xFF000000,
         SUB_FORMAT_MASK     = 0x00FFFFFF,
         // Aliases
@@ -249,13 +277,17 @@ public:
         DEVICE_OUT_AUX_DIGITAL = 0x400,
         DEVICE_OUT_ANLG_DOCK_HEADSET = 0x800,
         DEVICE_OUT_DGTL_DOCK_HEADSET = 0x1000,
-#if defined(QCOM_HARDWARE) && !defined(USES_AUDIO_LEGACY)
-        DEVICE_OUT_FM = 0x2000,
-        DEVICE_OUT_ANC_HEADSET = 0x4000,
-        DEVICE_OUT_ANC_HEADPHONE = 0x8000,
+#ifdef QCOM_HARDWARE
+        DEVICE_OUT_DIRECTOUTPUT = 0x2000,
+        DEVICE_OUT_SPDIF = 0x4000,
+#endif
+#ifdef QCOM_FM_ENABLED
+        DEVICE_OUT_FM = 0x8000,
         DEVICE_OUT_FM_TX = 0x10000,
-        DEVICE_OUT_DIRECTOUTPUT = 0x20000,
-        DEVICE_OUT_DEFAULT = 0x80000,
+#endif
+#ifdef QCOM_HARDWARE
+        DEVICE_OUT_PROXY = 0x80000,
+        DEVICE_OUT_DEFAULT = DEVICE_OUT_SPEAKER,
 #else
         DEVICE_OUT_DEFAULT = 0x8000,
 #endif
@@ -264,16 +296,18 @@ public:
                 DEVICE_OUT_BLUETOOTH_SCO_CARKIT | DEVICE_OUT_BLUETOOTH_A2DP | DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES |
                 DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER | DEVICE_OUT_AUX_DIGITAL |
                 DEVICE_OUT_ANLG_DOCK_HEADSET | DEVICE_OUT_DGTL_DOCK_HEADSET |
-#if defined(QCOM_HARDWARE) && !defined(USES_AUDIO_LEGACY)
-                DEVICE_OUT_ANC_HEADSET | DEVICE_OUT_ANC_HEADPHONE |
+#ifdef QCOM_FM_ENABLED
                 DEVICE_OUT_FM | DEVICE_OUT_FM_TX |
+#endif
+#ifdef QCOM_HARDWARE
+                DEVICE_OUT_DIRECTOUTPUT | DEVICE_OUT_PROXY | DEVICE_OUT_SPDIF |
 #endif
                 DEVICE_OUT_DEFAULT),
         DEVICE_OUT_ALL_A2DP = (DEVICE_OUT_BLUETOOTH_A2DP | DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES |
                 DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER),
 
         // input devices
-#if defined(QCOM_HARDWARE) && !defined(USES_AUDIO_LEGACY)
+#ifdef QCOM_HARDWARE
         DEVICE_IN_COMMUNICATION = 0x100000,
         DEVICE_IN_AMBIENT = 0x200000,
         DEVICE_IN_BUILTIN_MIC = 0x400000,
@@ -282,9 +316,13 @@ public:
         DEVICE_IN_AUX_DIGITAL = 0x2000000,
         DEVICE_IN_VOICE_CALL = 0x4000000,
         DEVICE_IN_BACK_MIC = 0x8000000,
-        DEVICE_IN_ANC_HEADSET = 0x10000000,
+#ifdef QCOM_FM_ENABLED
         DEVICE_IN_FM_RX = 0x20000000,
         DEVICE_IN_FM_RX_A2DP = 0x40000000,
+#endif
+        DEVICE_IN_DEFAULT = DEVICE_IN_BUILTIN_MIC,
+        DEVICE_IN_ANLG_DOCK_HEADSET = 0x80000000,
+        DEVICE_IN_PROXY = DEVICE_IN_ANLG_DOCK_HEADSET,
 #else
         DEVICE_IN_COMMUNICATION = 0x10000,
         DEVICE_IN_AMBIENT = 0x20000,
@@ -294,14 +332,16 @@ public:
         DEVICE_IN_AUX_DIGITAL = 0x200000,
         DEVICE_IN_VOICE_CALL = 0x400000,
         DEVICE_IN_BACK_MIC = 0x800000,
-#endif
         DEVICE_IN_DEFAULT = 0x80000000,
-
+#endif
         DEVICE_IN_ALL = (DEVICE_IN_COMMUNICATION | DEVICE_IN_AMBIENT | DEVICE_IN_BUILTIN_MIC |
                 DEVICE_IN_BLUETOOTH_SCO_HEADSET | DEVICE_IN_WIRED_HEADSET | DEVICE_IN_AUX_DIGITAL |
                 DEVICE_IN_VOICE_CALL | DEVICE_IN_BACK_MIC |
-#if defined(QCOM_HARDWARE) && !defined(USES_AUDIO_LEGACY)
-                DEVICE_IN_ANC_HEADSET | DEVICE_IN_FM_RX | DEVICE_IN_FM_RX_A2DP |
+#ifdef QCOM_FM_ENABLED
+                DEVICE_IN_FM_RX | DEVICE_IN_FM_RX_A2DP |
+#endif
+#ifdef QCOM_HARDWARE
+                DEVICE_IN_ANLG_DOCK_HEADSET | DEVICE_IN_PROXY |
 #endif
                 DEVICE_IN_DEFAULT)
     };
@@ -324,6 +364,7 @@ public:
         FORCE_BT_DESK_DOCK,
         FORCE_ANALOG_DOCK,
         FORCE_DIGITAL_DOCK,
+        FORCE_NO_BT_A2DP,
         NUM_FORCE_CONFIG,
         FORCE_DEFAULT = FORCE_NONE
     };
@@ -348,10 +389,13 @@ public:
         NUM_DEVICE_STATES
     };
 
+#endif
+
     static uint32_t popCount(uint32_t u) {
         return popcount(u);
     }
 
+#if 1
     static bool isOutputDevice(audio_devices device) {
         return audio_is_output_device((audio_devices_t)device);
     }
@@ -368,10 +412,10 @@ public:
         return audio_is_low_visibility((audio_stream_type_t)stream);
     }
     static bool isValidFormat(uint32_t format) {
-        return audio_is_valid_format(format);
+        return audio_is_valid_format((audio_format_t) format);
     }
     static bool isLinearPCM(uint32_t format) {
-        return audio_is_linear_pcm(format);
+        return audio_is_linear_pcm((audio_format_t) format);
     }
     static bool isOutputChannel(uint32_t channel) {
         return audio_is_output_channel(channel);
@@ -380,6 +424,7 @@ public:
         return audio_is_input_channel(channel);
     }
 
+#endif
 };
 
 };  // namespace android
