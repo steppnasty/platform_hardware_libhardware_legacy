@@ -11,12 +11,9 @@ LOCAL_SRC_FILES := \
     audio_hw_hal.cpp
 
 ifeq ($(BOARD_USES_AUDIO_LEGACY),true)
-    LOCAL_CFLAGS += -DUSES_AUDIO_LEGACY -DNO_SCREEN_STATE_KEY_SUPPORT
+    LOCAL_CFLAGS += -DUSES_AUDIO_LEGACY
 endif
 
-ifeq ($(BOARD_HAVE_BLUETOOTH),true)
-  LOCAL_CFLAGS += -DWITH_A2DP
-endif
 
 LOCAL_MODULE := libaudiohw_legacy
 LOCAL_MODULE_TAGS := optional
@@ -35,9 +32,6 @@ ifeq ($(AUDIO_POLICY_TEST),true)
   LOCAL_CFLAGS += -DAUDIO_POLICY_TEST
 endif
 
-ifeq ($(BOARD_HAVE_BLUETOOTH),true)
-  LOCAL_CFLAGS += -DWITH_A2DP
-endif
 
 LOCAL_STATIC_LIBRARIES := libmedia_helper
 LOCAL_MODULE := libaudiopolicy_legacy
@@ -54,8 +48,7 @@ LOCAL_SRC_FILES := \
 
 LOCAL_SHARED_LIBRARIES := \
     libcutils \
-    libutils \
-    libmedia
+    libutils
 
 LOCAL_STATIC_LIBRARIES := \
     libmedia_helper
@@ -66,10 +59,6 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 LOCAL_MODULE := audio_policy.default
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 LOCAL_MODULE_TAGS := optional
-
-ifeq ($(BOARD_HAVE_BLUETOOTH),true)
-  LOCAL_CFLAGS += -DWITH_A2DP
-endif
 
 include $(BUILD_SHARED_LIBRARY)
 
@@ -89,7 +78,6 @@ include $(BUILD_SHARED_LIBRARY)
 #
 #  LOCAL_CFLAGS += \
 #      -DWITH_BLUETOOTH \
-#      -DWITH_A2DP
 #endif
 #
 #include $(BUILD_SHARED_LIBRARY)
