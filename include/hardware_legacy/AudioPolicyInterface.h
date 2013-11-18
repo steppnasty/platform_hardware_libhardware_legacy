@@ -148,8 +148,8 @@ public:
     virtual audio_devices_t getDevicesForStream(AudioSystem::stream_type stream) = 0;
 
     // Audio effect management
-    virtual audio_io_handle_t getOutputForEffect(effect_descriptor_t *desc) = 0;
-    virtual status_t registerEffect(effect_descriptor_t *desc,
+    virtual audio_io_handle_t getOutputForEffect(const effect_descriptor_t *desc) = 0;
+    virtual status_t registerEffect(const effect_descriptor_t *desc,
                                     audio_io_handle_t io,
                                     uint32_t strategy,
                                     int session,
@@ -158,6 +158,7 @@ public:
     virtual status_t setEffectEnabled(int id, bool enabled) = 0;
 
     virtual bool isStreamActive(int stream, uint32_t inPastMs = 0) const = 0;
+    virtual bool isSourceActive(audio_source_t source) const = 0;
 
     //dump state
     virtual status_t    dump(int fd) = 0;

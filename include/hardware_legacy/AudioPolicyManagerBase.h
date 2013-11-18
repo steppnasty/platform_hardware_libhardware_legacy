@@ -124,8 +124,8 @@ public:
         // return the enabled output devices for the given stream type
         virtual audio_devices_t getDevicesForStream(AudioSystem::stream_type stream);
 
-        virtual audio_io_handle_t getOutputForEffect(effect_descriptor_t *desc);
-        virtual status_t registerEffect(effect_descriptor_t *desc,
+        virtual audio_io_handle_t getOutputForEffect(const effect_descriptor_t *desc);
+        virtual status_t registerEffect(const effect_descriptor_t *desc,
                                         audio_io_handle_t io,
                                         uint32_t strategy,
                                         int session,
@@ -134,6 +134,7 @@ public:
         virtual status_t setEffectEnabled(int id, bool enabled);
 
         virtual bool isStreamActive(int stream, uint32_t inPastMs = 0) const;
+        virtual bool isSourceActive(audio_source_t source) const;
 
         virtual status_t dump(int fd);
 

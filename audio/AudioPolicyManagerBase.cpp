@@ -1011,7 +1011,7 @@ status_t AudioPolicyManagerBase::getStreamVolumeIndex(AudioSystem::stream_type s
     return NO_ERROR;
 }
 
-audio_io_handle_t AudioPolicyManagerBase::getOutputForEffect(effect_descriptor_t *desc)
+audio_io_handle_t AudioPolicyManagerBase::getOutputForEffect(const effect_descriptor_t *desc)
 {
     ALOGV("getOutputForEffect()");
     // apply simple rule where global effects are attached to the same output as MUSIC streams
@@ -1029,7 +1029,7 @@ audio_io_handle_t AudioPolicyManagerBase::getOutputForEffect(effect_descriptor_t
     return dstOutputs[outIdx];
 }
 
-status_t AudioPolicyManagerBase::registerEffect(effect_descriptor_t *desc,
+status_t AudioPolicyManagerBase::registerEffect(const effect_descriptor_t *desc,
                                 audio_io_handle_t io,
                                 uint32_t strategy,
                                 int session,
@@ -1145,6 +1145,17 @@ bool AudioPolicyManagerBase::isStreamActive(int stream, uint32_t inPastMs) const
     return false;
 }
 
+bool AudioPolicyManagerBase::isSourceActive(audio_source_t source) const
+{
+    for (size_t i = 0; i < mInputs.size(); i++) {
+        const AudioInputDescriptor * inputDescriptor = mInputs.valueAt(i);
+        if ((inputDescriptor->mInputSource == (int) source)
+                && (inputDescriptor->mRefCount > 0)) {
+            return true;
+        }
+    }
+    return false;
+}
 
 status_t AudioPolicyManagerBase::dump(int fd)
 {
