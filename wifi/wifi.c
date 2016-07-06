@@ -899,9 +899,9 @@ int wifi_change_fw_path(const char *fwpath)
         return ret;
 
     if (!is_wifi_driver_loaded()) {
-        LOGD("Loading wifi driver so that we may set the fw path");
+        ALOGD("Loading wifi driver so that we may set the fw path");
         if (wifi_load_driver() != 0) {
-            LOGE("Could not load wifi driver!");
+            ALOGE("Could not load wifi driver!");
         }
     }
 
