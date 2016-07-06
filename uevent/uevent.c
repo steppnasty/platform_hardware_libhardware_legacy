@@ -41,17 +41,14 @@ static int fd = -1;
 /* Returns 0 on failure, 1 on success */
 int uevent_init()
 {
-    union {
-        struct sockaddr_nl nl;
-        struct sockaddr generic;
-    } addr;
+    struct sockaddr_nl addr;
     int sz = 64*1024;
     int s;
 
-    memset(&addr.nl, 0, sizeof(addr.nl));
-    addr.nl.nl_family = AF_NETLINK;
-    addr.nl.nl_pid = getpid();
-    addr.nl.nl_groups = 0xffffffff;
+    memset(&addr, 0, sizeof(addr));
+    addr.nl_family = AF_NETLINK;
+    addr.nl_pid = getpid();
+    addr.nl_groups = 0xffffffff;
 
     s = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_KOBJECT_UEVENT);
     if(s < 0)
@@ -59,7 +56,7 @@ int uevent_init()
 
     setsockopt(s, SOL_SOCKET, SO_RCVBUFFORCE, &sz, sizeof(sz));
 
-    if(bind(s, &addr.generic, sizeof(addr.nl)) < 0) {
+    if(bind(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
         close(s);
         return 0;
     }
@@ -84,7 +81,7 @@ int uevent_next_event(char* buffer, int buffer_length)
         fds.revents = 0;
         nr = poll(&fds, 1, -1);
      
-        if(nr > 0 && fds.revents == POLLIN) {
+        if(nr > 0 && (fds.revents & POLLIN)) {
             int count = recv(fd, buffer, buffer_length, 0);
             if (count > 0) {
                 struct uevent_handler *h;
