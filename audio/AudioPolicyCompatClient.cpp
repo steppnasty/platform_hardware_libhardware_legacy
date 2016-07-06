@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 The Android Open Source Project
- * Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -128,13 +128,11 @@ status_t AudioPolicyCompatClient::setStreamVolume(
                                           volume, output, delayMs);
 }
 
-#ifdef QCOM_FM_ENABLED
 status_t AudioPolicyCompatClient::setFmVolume(float volume,
                                               int delayMs)
 {
     return mServiceOps->set_fm_volume(mService, volume, delayMs);
 }
-#endif
 
 status_t AudioPolicyCompatClient::startTone(ToneGenerator::tone_type tone,
                                        AudioSystem::stream_type stream)

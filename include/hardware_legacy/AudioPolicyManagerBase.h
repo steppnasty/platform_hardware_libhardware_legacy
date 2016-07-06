@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2009 The Android Open Source Project
- * Copyright (c) 2012, Code Aurora Forum. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +12,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * This file was modified by Dolby Laboratories, Inc. The portions of the
+ * code that are surrounded by "DOLBY..." are copyrighted and
+ * licensed separately, as follows:
+ *
+ *  (C) 2011-2012 Dolby Laboratories, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  */
 
 
@@ -228,6 +246,8 @@ protected:
         static const VolumeCurvePoint sSpeakerSonificationVolumeCurve[AudioPolicyManagerBase::VOLCNT];
         static const VolumeCurvePoint sDefaultSystemVolumeCurve[AudioPolicyManagerBase::VOLCNT];
         static const VolumeCurvePoint sHeadsetSystemVolumeCurve[AudioPolicyManagerBase::VOLCNT];
+        static const VolumeCurvePoint sDefaultVoiceVolumeCurve[AudioPolicyManagerBase::VOLCNT];
+        static const VolumeCurvePoint sSpeakerVoiceVolumeCurve[AudioPolicyManagerBase::VOLCNT];
         // default volume curves per stream and device category. See initializeVolumeCurves()
         static const VolumeCurvePoint *sVolumeProfiles[AUDIO_STREAM_CNT][DEVICE_CATEGORY_CNT];
 
@@ -249,6 +269,7 @@ protected:
             audio_devices_t supportedDevices();
             uint32_t latency();
             bool sharesHwModuleWith(const AudioOutputDescriptor *outputDesc);
+            bool isActive(uint32_t inPastMs) const;
 
             audio_io_handle_t mId;              // output handle
             uint32_t mSamplingRate;             //
@@ -332,17 +353,13 @@ protected:
         //  2 access to either current device selection (fromCache == true) or
         // "future" device selection (fromCache == false) when called from a context
         //  where conditions are changing (setDeviceConnectionState(), setPhoneState()...) AND
-        //  before updateDeviceForStrategy() is called.
+        //  before updateDevicesAndOutputs() is called.
         virtual audio_devices_t getDeviceForStrategy(routing_strategy strategy,
                                                      bool fromCache);
 
         // change the route of the specified output. Returns the number of ms we have slept to
         // allow new routing to take effect in certain cases.
-#ifdef QCOM_HARDWARE
         virtual uint32_t setOutputDevice(audio_io_handle_t output,
-#else
-        uint32_t setOutputDevice(audio_io_handle_t output,
-#endif
                              audio_devices_t device,
                              bool force = false,
                              int delayMs = 0);
@@ -351,7 +368,9 @@ protected:
         virtual audio_devices_t getDeviceForInputSource(int inputSource);
 
         // return io handle of active input or 0 if no input is active
-        audio_io_handle_t getActiveInput();
+        //    Only considers inputs from physical devices (e.g. main mic, headset mic) when
+        //    ignoreVirtualInputs is true.
+        audio_io_handle_t getActiveInput(bool ignoreVirtualInputs = true);
 
         // initialize volume curves for each strategy and device category
         void initializeVolumeCurves();
@@ -361,11 +380,7 @@ protected:
         virtual float computeVolume(int stream, int index, audio_io_handle_t output, audio_devices_t device);
 
         // check that volume change is permitted, compute and send new volume to audio hardware
-#ifdef QCOM_HARDWARE
         virtual status_t checkAndSetVolume(int stream, int index, audio_io_handle_t output, audio_devices_t device, int delayMs = 0, bool force = false);
-#else
-        status_t checkAndSetVolume(int stream, int index, audio_io_handle_t output, audio_devices_t device, int delayMs = 0, bool force = false);
-#endif
 
         // apply all stream volumes to the specified output and device
         void applyStreamVolumes(audio_io_handle_t output, audio_devices_t device, int delayMs = 0, bool force = false);
@@ -378,11 +393,7 @@ protected:
                              audio_devices_t device = (audio_devices_t)0);
 
         // Mute or unmute the stream on the specified output
-#ifdef QCOM_HARDWARE
         virtual void setStreamMute(int stream,
-#else
-        void setStreamMute(int stream,
-#endif
                            bool on,
                            audio_io_handle_t output,
                            int delayMs = 0,
@@ -414,7 +425,7 @@ protected:
         // checks and if necessary changes outputs used for all strategies.
         // must be called every time a condition that affects the output choice for a given strategy
         // changes: connected device, phone state, force use...
-        // Must be called before updateDeviceForStrategy()
+        // Must be called before updateDevicesAndOutputs()
         void checkOutputForStrategy(routing_strategy strategy);
 
         // Same as checkOutputForStrategy() but for a all strategies in order of priority
@@ -438,7 +449,7 @@ protected:
         // cached values are used by getDeviceForStrategy() if parameter fromCache is true.
          // Must be called after checkOutputForAllStrategies()
 
-        void updateDeviceForStrategy();
+        void updateDevicesAndOutputs();
 
         // true if current platform requires a specific output to be opened for this particular
         // set of parameters. This function is called by getOutput() and is implemented by platform
@@ -462,11 +473,23 @@ protected:
 
         // returns the category the device belongs to with regard to volume curve management
         static device_category getDeviceCategory(audio_devices_t device);
+#ifdef DOLBY_UDC_MULTICHANNEL
+        enum HdmiDeviceCapability {
+            HDMI_8,
+            HDMI_6,
+            HDMI_2,
+            HDMI_INVALID
+        };
 
+        void setDolbySystemProperty(audio_devices_t);
+
+        HdmiDeviceCapability mCurrentHdmiDeviceCapability;
+#endif //DOLBY_UDC_MULTICHANNEL
         // extract one device relevant for volume control from multiple device selection
         static audio_devices_t getDeviceForVolume(audio_devices_t device);
 
-        SortedVector<audio_io_handle_t> getOutputsForDevice(audio_devices_t device);
+        SortedVector<audio_io_handle_t> getOutputsForDevice(audio_devices_t device,
+                        DefaultKeyedVector<audio_io_handle_t, AudioOutputDescriptor *> openOutputs);
         bool vectorsEqual(SortedVector<audio_io_handle_t>& outputs1,
                                            SortedVector<audio_io_handle_t>& outputs2);
 
@@ -484,7 +507,7 @@ protected:
                                    uint32_t samplingRate,
                                    uint32_t format,
                                    uint32_t channelMask);
-        IOProfile *getProfileForDirectOutput(audio_devices_t device,
+        virtual IOProfile *getProfileForDirectOutput(audio_devices_t device,
                                                        uint32_t samplingRate,
                                                        uint32_t format,
                                                        uint32_t channelMask,
@@ -508,19 +531,20 @@ protected:
         void loadGlobalConfig(cnode *root);
         status_t loadAudioPolicyConfig(const char *path);
         void defaultAudioPolicyConfig(void);
-#ifdef QCOM_HARDWARE
-        // updates device caching and output for streams that can influence the
-        //    routing of notifications
-        void handleNotificationRoutingForStream(AudioSystem::stream_type stream);
-#endif
 
 
         AudioPolicyClientInterface *mpClientInterface;  // audio policy client interface
         audio_io_handle_t mPrimaryOutput;              // primary output handle
-        DefaultKeyedVector<audio_io_handle_t, AudioOutputDescriptor *> mOutputs;   // list of output descriptors
+        // list of descriptors for outputs currently opened
+        DefaultKeyedVector<audio_io_handle_t, AudioOutputDescriptor *> mOutputs;
+        // copy of mOutputs before setDeviceConnectionState() opens new outputs
+        // reset to mOutputs when updateDevicesAndOutputs() is called.
+        DefaultKeyedVector<audio_io_handle_t, AudioOutputDescriptor *> mPreviousOutputs;
         DefaultKeyedVector<audio_io_handle_t, AudioInputDescriptor *> mInputs;     // list of input descriptors
         audio_devices_t mAvailableOutputDevices; // bit field of all available output devices
         audio_devices_t mAvailableInputDevices; // bit field of all available input devices
+                                                // without AUDIO_DEVICE_BIT_IN to allow direct bit
+                                                // field comparisons
         int mPhoneState;                                                    // current phone state
         AudioSystem::forced_config mForceUse[AudioSystem::NUM_FORCE_USE];   // current forced use configuration
 
@@ -543,13 +567,12 @@ protected:
         bool    mA2dpSuspended;  // true if A2DP output is suspended
         bool mHasA2dp; // true on platforms with support for bluetooth A2DP
         bool mHasUsb; // true on platforms with support for USB audio
+        bool mHasRemoteSubmix; // true on platforms with support for remote presentation of a submix
         audio_devices_t mAttachedOutputDevices; // output devices always available on the platform
         audio_devices_t mDefaultOutputDevice; // output device selected by default at boot time
                                               // (must be in mAttachedOutputDevices)
 
         Vector <HwModule *> mHwModules;
-        Vector <IOProfile *> mOutputProfiles; // output profiles loaded from audio_policy.conf
-        Vector <IOProfile *> mInputProfiles;  // input profiles loaded from audio_policy.conf
 
 #ifdef AUDIO_POLICY_TEST
         Mutex   mLock;
@@ -569,11 +592,10 @@ protected:
 private:
         static float volIndexToAmpl(audio_devices_t device, const StreamDescriptor& streamDesc,
                 int indexInUi);
-#ifndef QCOM_HARDWARE
         // updates device caching and output for streams that can influence the
         //    routing of notifications
         void handleNotificationRoutingForStream(AudioSystem::stream_type stream);
-#endif
+        static bool isVirtualInputDevice(audio_devices_t device);
 };
 
 };

@@ -137,14 +137,14 @@ static audio_io_handle_t ap_get_output(struct audio_policy *pol,
                                        audio_stream_type_t stream,
                                        uint32_t sampling_rate,
                                        audio_format_t format,
-                                       uint32_t channels,
+                                       audio_channel_mask_t channelMask,
                                        audio_output_flags_t flags)
 {
     struct legacy_audio_policy *lap = to_lap(pol);
 
     ALOGV("%s: tid %d", __func__, gettid());
     return lap->apm->getOutput((AudioSystem::stream_type)stream,
-                               sampling_rate, (int) format, channels,
+                               sampling_rate, (int) format, channelMask,
                                (AudioSystem::output_flags)flags);
 }
 
@@ -174,11 +174,11 @@ static void ap_release_output(struct audio_policy *pol,
 static audio_io_handle_t ap_get_input(struct audio_policy *pol, audio_source_t inputSource,
                                       uint32_t sampling_rate,
                                       audio_format_t format,
-                                      uint32_t channels,
+                                      audio_channel_mask_t channelMask,
                                       audio_in_acoustics_t acoustics)
 {
     struct legacy_audio_policy *lap = to_lap(pol);
-    return lap->apm->getInput((int) inputSource, sampling_rate, (int) format, channels,
+    return lap->apm->getInput((int) inputSource, sampling_rate, (int) format, channelMask,
                               (AudioSystem::audio_in_acoustics)acoustics);
 }
 
@@ -349,10 +349,8 @@ static int create_legacy_ap(const struct audio_policy_device *device,
     lap->policy.init_stream_volume = ap_init_stream_volume;
     lap->policy.set_stream_volume_index = ap_set_stream_volume_index;
     lap->policy.get_stream_volume_index = ap_get_stream_volume_index;
-#ifndef ICS_AUDIO_BLOB
     lap->policy.set_stream_volume_index_for_device = ap_set_stream_volume_index_for_device;
     lap->policy.get_stream_volume_index_for_device = ap_get_stream_volume_index_for_device;
-#endif
     lap->policy.get_strategy_for_stream = ap_get_strategy_for_stream;
     lap->policy.get_devices_for_stream = ap_get_devices_for_stream;
     lap->policy.get_output_for_effect = ap_get_output_for_effect;
